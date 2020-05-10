@@ -1,16 +1,10 @@
 services:
 
-    goat.runner.profiler:
-        public: false
-        class: Goat\Query\Symfony\DataCollector\RunnerProfiler
-        decorates: goat.runner.default
-        arguments: ["@goat.runner.profiler.inner"]
-
     Goat\Query\Symfony\Twig\ProfilerExtension:
         public: false
         tags: ['twig.extension']
 
     Goat\Query\Symfony\DataCollector\ConnectionDataCollector:
         public: false
-        arguments: ["@goat.runner.profiler", '@?debug.stopwatch']
+        arguments: ["@goat.runner.default", '@?debug.stopwatch']
         tags: [{name: data_collector, template: "@Goat/profiler/goat.html.twig", id: goat_runner}]

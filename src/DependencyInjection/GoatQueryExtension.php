@@ -35,12 +35,15 @@ final class GoatQueryExtension extends Extension
         $this->registerRunnerList($container, $config['runner'] ?? []);
 
         if (\in_array('Symfony\\Bundle\\WebProfilerBundle\\WebProfilerBundle', $container->getParameter('kernel.bundles'))) {
-            $loader->load('profiler.yaml');
+            // @todo This does not work anyway, for many reasons:
+            //   - we need to decorate *all* runners,
+            //   - code is not stabilized yet.
+            // $loader->load('profiler.yaml');
         }
     }
 
     /**
-     * Create runner list
+     * Create runner list.
      */
     private function registerRunnerList(ContainerBuilder $container, array $config): void
     {
@@ -58,7 +61,7 @@ final class GoatQueryExtension extends Extension
     }
 
     /**
-     * Validate and create a single runner
+     * Validate and create a single runner.
      */
     private function registerRunner(ContainerBuilder $container, string $name, array $config): void
     {
@@ -86,7 +89,7 @@ final class GoatQueryExtension extends Extension
     }
 
     /**
-     * Configure single runner
+     * Configure single runner.
      */
     private function configureRunner(ContainerBuilder $container, string $name, array $config, Definition $runnerDefinition): void
     {
@@ -133,7 +136,7 @@ final class GoatQueryExtension extends Extension
     }
 
     /**
-     * Create a single doctrine runner
+     * Create a single doctrine runner.
      */
     private function createDoctrineRunner(ContainerBuilder $container, string $name, array $config): Definition
     {
@@ -172,7 +175,7 @@ final class GoatQueryExtension extends Extension
     }
 
     /**
-     * Create a single ext-pgsql runner
+     * Create a single ext-pgsql runner.
      */
     private function createExtPgSqlRunner(ContainerBuilder $container, string $name, array $config): Definition
     {
