@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Goat\Query\Symfony\DependencyInjection;
 
 use Doctrine\DBAL\Connection;
+use GeneratedHydrator\Bridge\Symfony\DeepHydrator;
+use GeneratedHydrator\Bridge\Symfony\GeneratedHydratorBundle;
 use Goat\Driver\Configuration;
 use Goat\Driver\DriverFactory;
 use Goat\Driver\ExtPgSQLDriver;
 use Goat\Query\QueryBuilder;
 use Goat\Runner\Runner;
+use Goat\Runner\Hydrator\GeneratedHydratorBundleHydratorRegistry;
 use Goat\Runner\Metadata\ApcuResultMetadataCache;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -32,6 +35,8 @@ final class GoatQueryExtension extends Extension
         $loader = new YamlFileLoader($container, new FileLocator(\dirname(__DIR__).'/Resources/config'));
         $loader->load('services.yaml');
 
+        $this->registerHydratorRegistry($container, $config);
+
         $this->registerRunnerList($container, $config['runner'] ?? []);
 
         if (\in_array('Symfony\\Bundle\\WebProfilerBundle\\WebProfilerBundle', $container->getParameter('kernel.bundles'))) {
@@ -39,6 +44,21 @@ final class GoatQueryExtension extends Extension
             //   - we need to decorate *all* runners,
             //   - code is not stabilized yet.
             // $loader->load('profiler.yaml');
+        }
+    }
+
+    /**
+     * Autoconfigure hydrator registry.
+     */
+    private function registerHydratorRegistry(ContainerBuilder $container, array $config): void
+    {
+        if (\in_array(GeneratedHydratorBundle::class, $container->getParameter('kernel.bundles'))) {
+            $definition = (new Definition())
+                ->setClass(GeneratedHydratorBundleHydratorRegistry::class)
+                ->setArguments([new Reference(DeepHydrator::class)])
+                ->setPrivate(true)
+            ;
+            $container->setDefinition('goat.hydrator_registy', $definition);
         }
     }
 
@@ -120,6 +140,8 @@ final class GoatQueryExtension extends Extension
                     throw new \InvalidArgumentException();
             }
         }
+
+        $runnerDefinition->addMethodCall('setHydratorRegistry', [new Reference('goat.hydrator_registy')]);
 
         // Create the query builder definition.
         $queryBuilderDefinition = (new Definition())
