@@ -15,11 +15,11 @@ use Symfony\Component\HttpKernel\DataCollector\LateDataCollectorInterface;
 
 final class RunnerDataCollector extends DataCollector implements LateDataCollectorInterface
 {
-    private Runner $runner;
+    private iterable $runners;
 
-    public function __construct(Runner $runner)
+    public function __construct(iterable $runners)
     {
-        $this->runner = $runner;
+        $this->runners = $runners;
     }
 
     /**
@@ -27,12 +27,6 @@ final class RunnerDataCollector extends DataCollector implements LateDataCollect
      */
     private function doCollect(): array
     {
-        $runner = $this->runner;
-
-        if (!$runner instanceof ProfilerAware) {
-            return [];
-        }
-
         $ret = [
             'exception' => 0, // @todo
             'execute_count' => 0, // @todo
@@ -51,15 +45,32 @@ final class RunnerDataCollector extends DataCollector implements LateDataCollect
             'transaction_time' => 0, // @todo
         ];
 
+        foreach ($this->runners as $runner) {
+            $this->doCollectRunner($runner, $ret);
+        }
+
+        return $ret;
+    }
+
+    /**
+     * Collect and format all runner profiler data for a single runner.
+     */
+    private function doCollectRunner(Runner $runner, array &$ret)
+    {
+        if (!$runner instanceof ProfilerAware) {
+            return;
+        }
+
         foreach ($runner->getProfiler()->all() as $result) {
             \assert($result instanceof ProfilerResult);
 
             if ($result instanceof QueryProfiler) {
                 $ret['queries'][] = [
-                    'sql' => null,// $rawSQL,
-                    'params' => [], // $this->pruneNonScalarFrom($arguments),
                     'options' => [], // $this->pruneNonScalarFrom($options),
+                    'params' => [], // $this->pruneNonScalarFrom($arguments),
                     'prepared' => [], //$prepared,
+                    'sql' => null,// $rawSQL,
+                    'timers' => $result->getAll(),
                 ];
                 $ret['query_count']++;
                 $ret['query_time'] += $result->getTotalTime();
@@ -75,7 +86,7 @@ final class RunnerDataCollector extends DataCollector implements LateDataCollect
      */
     public function collect(Request $request, Response $response, \Throwable $exception = null)
     {
-        $this->doCollect($request, $response);
+        $this->data = $this->doCollect($request, $response);
     }
 
     /**
