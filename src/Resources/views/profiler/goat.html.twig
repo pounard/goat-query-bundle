@@ -21,12 +21,13 @@
     <tr id="queryNo-{{ i }}" class="{{ cycle(['odd', 'even'], i) }}">
       <td>{{ i }}</td>
       <td>
+        {% if query.total is defined %}
+        <div><strong>total</strong>:&nbsp;{{ query.total }}&nbsp;ms</div>
+        {% endif %}
         {% if query.timers is defined %}
         {% for name, time in query.timers %}
         <div>{{ name }}:&nbsp;{{ time }}&nbsp;ms</div>
         {% endfor %}
-        {% else %}
-        <em>N/A</em>
         {% endif %}
       </td>
       <td id="queryNo-{{ i }}">

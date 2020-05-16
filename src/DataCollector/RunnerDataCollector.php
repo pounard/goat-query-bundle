@@ -67,10 +67,11 @@ final class RunnerDataCollector extends DataCollector implements LateDataCollect
             if ($result instanceof QueryProfiler) {
                 $ret['queries'][] = [
                     'options' => [], // $this->pruneNonScalarFrom($options),
-                    'params' => [], // $this->pruneNonScalarFrom($arguments),
+                    'params' => $result->getSqlArguments() ?? [],
                     'prepared' => [], //$prepared,
-                    'sql' => null,// $rawSQL,
+                    'sql' => $result->getSqlQuery(),
                     'timers' => $result->getAll(),
+                    'total' => $result->getTotalTime(),
                 ];
                 $ret['query_count']++;
                 $ret['query_time'] += $result->getTotalTime();

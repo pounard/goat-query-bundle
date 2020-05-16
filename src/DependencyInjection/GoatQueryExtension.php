@@ -79,6 +79,17 @@ final class GoatQueryExtension extends Extension
             )
         ]);
 
+        // Enable debug mode on each runner, in order to collect executed SQL
+        // in query profiler results.
+        foreach ($runnerServicesList as $serviceId) {
+            // Service could be an alias.
+            if ($container->hasAlias($serviceId)) {
+                $serviceId = (string)$container->getAlias($serviceId);
+            }
+            $definition = $container->getDefinition($serviceId);
+            $definition->addMethodCall('setDebug', [true]);
+        }
+
         $container->addDefinitions([
             ProfilerExtension::class => $profilerTwigExtension,
             RunnerDataCollector::class => $runnerDataCollector,

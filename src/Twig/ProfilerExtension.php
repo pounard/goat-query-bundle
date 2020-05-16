@@ -23,7 +23,7 @@ final class ProfilerExtension extends AbstractExtension
                 'goat_format_sql',
                 static function (string $raw): string {
                     if (\class_exists(SqlFormatter::class)) {
-                        return SqlFormatter::format($raw, true);
+                        return (new SqlFormatter())->format($raw);
                     }
                     return \str_replace("\n", "<br/>", \str_replace("\n\n", "\n", \trim($raw)));
                 },
