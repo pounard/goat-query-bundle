@@ -73,7 +73,7 @@ bring any performance boost (it would slower the runner actually).
 The previous section works for any driver, just replace all `ext-pgsql` section
 by any of:
 
- - `ext-pgsql` : for PostgreSQL via PHP `ext-pdo`,
+ - `ext-pgsql` : for PostgreSQL via PHP `ext-pgsql`,
  - `pdo-pgsql` : for PostgreSQL via `PDO`,
  - `pgsql` : for PostgreSQL via driver autoselection (`ext-pgsql` is prefered),
  - `pdo-mysql` : for MySQL via `PDO`,
