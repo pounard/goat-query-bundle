@@ -10,11 +10,14 @@ for the Symfony framework.
 composer req makinacorpus/goat-query-bundle
 ```
 
-Then add the following bundles into your Symfony bundle registration point:
+Then add the following bundles into your Symfony `config/bundles.php` file:
 
- - `Goat\Query\Symfony\GoatQueryBundle` for query runner and query builder
-   availability (for this one you need a default Doctrine DBAL connection
-   to be configured in your Symfony app).
+```php
+return [
+    // Your bundles...
+    Goat\Query\Symfony\GoatQueryBundle::class => ['all' => true],
+];
+```
 
 # Usage
 
@@ -29,15 +32,12 @@ or controllers action methods parameters):
 
 # Advanced configuration
 
-## Driver configuration
-
-None as of now - since Doctrine is the only driver available, all configuration
-happens in Doctrine and not in this bundle.
-
 ## Runners
 
 A runner is a connection, you may have one or more. Per default, you should
-always configure the `default` connection:
+always configure the `default` connection.
+
+### Re-using a Doctrine connection
 
 ```yaml
 goat_query:
@@ -51,7 +51,35 @@ goat_query:
         enabled: true
 ```
 
-You may have more than one connection:
+### Using the ext-pgsql driver
+
+```yaml
+goat_query:
+    runner:
+        default:
+              driver: ext-pgsql
+              url: '%env(resolve:DATABASE_URL)%'
+        logging:
+              driver: ext-pgsql
+              url: '%env(resolve:DATABASE_URL)%'
+```
+
+You will notice that for `ext-pgsl` we do not configure a metadata cache,
+because `ext-pgsql` is very fast and using APCu to store metadata doesn't
+bring any performance boost (it would slower the runner actually).
+
+### Using &lt;any&gt; driver
+
+The previous section works for any driver, just replace all `ext-pgsql` section
+by any of:
+
+ - `ext-pgsql` : for PostgreSQL via PHP `ext-pdo`,
+ - `pdo-pgsql` : for PostgreSQL via `PDO`,
+ - `pgsql` : for PostgreSQL via driver autoselection (`ext-pgsql` is prefered),
+ - `pdo-mysql` : for MySQL via `PDO`,
+ - `mysql` : for MySQL via driver autoselection (only `PDO` is supported right now).
+
+### More than one database connexion
 
 ```yaml
 goat_query:
@@ -61,6 +89,9 @@ goat_query:
               driver: doctrine
               metadata_cache: apcu
               metadata_cache_prefix: "%goat.runner.metadata_cache_prefix%"
+        some_business_connection:
+              driver: ext-pgsql
+              url: '%env(resolve:ANOTHER_DATABASE_URL)%'
         logging:
               autocommit: true
               doctrine_connection: another_connnection
@@ -81,6 +112,9 @@ available:
  - `goat.runner.default`, the default one,
  - `goat.runner.logging`, the other one.
 
-## Runners options
+## Driver configuration
+
+Read the `` file in this package for more information.
 
 @todo
+
