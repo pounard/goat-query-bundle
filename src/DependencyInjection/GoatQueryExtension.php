@@ -211,6 +211,7 @@ final class GoatQueryExtension extends Extension
             }
         }
 
+        $runnerDefinition->addMethodCall('setConverter', [new Reference('goat.converter.default')]);
         $runnerDefinition->addMethodCall('setHydratorRegistry', [new Reference('goat.hydrator_registy')]);
 
         $runnerServiceId = 'goat.runner.'.$name;
