@@ -7,18 +7,18 @@ goat_query:
         #
         default:
             #
-            # Driver for the SQL abstraction layer.
+            # Driver for the SQL abstraction laye
             #
-            driver: ext-pgsql
+            # Until now only 'doctrine' supported, and it requires a valid Doctrine
+            # DBAL connection to be configured in the container.
+            #
+            driver: doctrine
 
             #
-            # Database URL, sane default is to use the same constant that
-            # Symfony would setup for Doctrine DBAL connexions.
+            # If you are using the Doctrine DBAL driver, you can specify which
+            # connection to use.
             #
-            # Database URL might contain as many options as you wish, such as:
-            # ?foo=bar&timezone=Europe/Paris for example.
-            #
-            url: '%env(resolve:DATABASE_URL)%'
+            doctrine_connection: default
 
             #
             # SQL query return types cache
@@ -49,10 +49,8 @@ goat_query:
             metadata_cache_prefix: "app_%kernel.environment%"
 
         #
-        # You may specify as many connections as you wish, using different
-        # database drivers.
+        # You may specify as many connections as you wish.
         #
         logging:
-            driver: pdo-mysql
-            metadata_cache: apcu
-            url: '%env(resolve:ANOTHER_DATABASE_URL)%'
+            driver: doctrine
+            doctrine_connection: another_connection
