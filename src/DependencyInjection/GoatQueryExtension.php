@@ -9,7 +9,6 @@ use GeneratedHydrator\Bridge\Symfony\DeepHydrator;
 use GeneratedHydrator\Bridge\Symfony\GeneratedHydratorBundle;
 use Goat\Converter\ConverterInterface;
 use Goat\Converter\DefaultConverter;
-use Goat\Converter\Impl\IntervalValueConverter;
 use Goat\Driver\Configuration;
 use Goat\Driver\DriverFactory;
 use Goat\Driver\ExtPgSQLDriver;
@@ -51,15 +50,10 @@ final class GoatQueryExtension extends Extension
     private function registerDefaultConverter(ContainerBuilder $container, array $config): void
     {
         $defaultConverter = new Definition(DefaultConverter::class);
+        $defaultConverter->setArguments([true]);
         $defaultConverter->setPrivate(true);
         $container->setDefinition('goat.converter.default', $defaultConverter);
         $container->setAlias(ConverterInterface::class, 'goat.converter.default');
-
-        // Also register default implementations.
-        $intervalConverter = new Definition(IntervalValueConverter::class);
-        $intervalConverter->setPrivate(true);
-        $intervalConverter->addTag('goat.value_converter');
-        $container->setDefinition('goat.value_converter.interval', $intervalConverter);
     }
 
     /**
