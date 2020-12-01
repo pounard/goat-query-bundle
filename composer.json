@@ -43,7 +43,7 @@
     "require" : {
         "php" : ">=7.4",
         "psr/log": "^1.0",
-        "makinacorpus/goat-query": "^2.0.1"
+        "makinacorpus/goat-query": "^3.0.0-alpha2"
     },
     "require-dev" : {
         "ocramius/generated-hydrator": "^3.1",

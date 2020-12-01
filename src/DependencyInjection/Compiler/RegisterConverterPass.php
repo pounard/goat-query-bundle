@@ -17,7 +17,7 @@ final class RegisterConverterPass implements CompilerPassInterface
      */
     public function process(ContainerBuilder $container)
     {
-        $converterDefinition = $container->getDefinition('goat.converter.default');
+        $converterDefinition = $container->getDefinition('goat.converter.registry');
 
         foreach (\array_keys($container->findTaggedServiceIds('goat.value_converter', true)) as $id) {
             $definition = $container->getDefinition($id);

@@ -8,7 +8,7 @@ use Doctrine\DBAL\Connection;
 use GeneratedHydrator\Bridge\Symfony\DeepHydrator;
 use GeneratedHydrator\Bridge\Symfony\GeneratedHydratorBundle;
 use Goat\Converter\ConverterInterface;
-use Goat\Converter\DefaultConverter;
+use Goat\Converter\ValueConverterRegistry;
 use Goat\Driver\Configuration;
 use Goat\Driver\DriverFactory;
 use Goat\Driver\ExtPgSQLDriver;
@@ -49,11 +49,10 @@ final class GoatQueryExtension extends Extension
      */
     private function registerDefaultConverter(ContainerBuilder $container, array $config): void
     {
-        $defaultConverter = new Definition(DefaultConverter::class);
-        $defaultConverter->setArguments([true]);
+        $defaultConverter = new Definition(ValueConverterRegistry::class);
         $defaultConverter->setPrivate(true);
-        $container->setDefinition('goat.converter.default', $defaultConverter);
-        $container->setAlias(ConverterInterface::class, 'goat.converter.default');
+        $container->setDefinition('goat.converter.registry', $defaultConverter);
+        $container->setAlias(ConverterInterface::class, 'goat.converter.registry');
     }
 
     /**
@@ -205,7 +204,7 @@ final class GoatQueryExtension extends Extension
             }
         }
 
-        $runnerDefinition->addMethodCall('setConverter', [new Reference('goat.converter.default')]);
+        $runnerDefinition->addMethodCall('setValueConverterRegistry', [new Reference('goat.converter.registry')]);
         $runnerDefinition->addMethodCall('setHydratorRegistry', [new Reference('goat.hydrator_registy')]);
 
         $runnerServiceId = 'goat.runner.'.$name;
