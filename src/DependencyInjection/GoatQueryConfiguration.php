@@ -41,7 +41,7 @@ final class GoatQueryConfiguration implements ConfigurationInterface
                             ->end()
                             ->enumNode('metadata_cache')
                                 ->info("Enable metadata cache, 'doctrine' and 'pdo-*' drivers should use this")
-                                ->values(['array', 'apcu', 'php'])
+                                ->values([null, 'array', 'apcu', 'php'])
                                 ->defaultNull()
                             ->end()
                             ->scalarNode('metadata_cache_prefix')

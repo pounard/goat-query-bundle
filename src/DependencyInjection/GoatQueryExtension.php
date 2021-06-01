@@ -10,6 +10,7 @@ use GeneratedHydrator\Bridge\Symfony\GeneratedHydratorBundle;
 use Goat\Converter\ConverterInterface;
 use Goat\Converter\ValueConverterRegistry;
 use Goat\Driver\Configuration;
+use Goat\Driver\Driver;
 use Goat\Driver\DriverFactory;
 use Goat\Driver\ExtPgSQLDriver;
 use Goat\Query\QueryBuilder;
@@ -146,23 +147,23 @@ final class GoatQueryExtension extends Extension
     private function registerRunner(ContainerBuilder $container, string $name, array $config): string
     {
         $runnerDefinition = null;
-        $runnerDriver = $config['driver'] ?? 'doctrine';
+        $runnerDriver = $config['driver'] ?? null;
 
+        // Driver can be null, case in which implementation and options will
+        // be determined at runtime using the DriverFactory.
         switch ($runnerDriver) {
 
             case 'doctrine':
                 $runnerDefinition = $this->createDoctrineRunner($container, $name, $config);
                 break;
 
-            case 'ext-pgsql':
+            case Configuration::DRIVER_EXT_PGSQL:
                 $runnerDefinition = $this->createExtPgSqlRunner($container, $name, $config);
                 break;
 
-            default: // Configuration should have handled invalid values.
-                throw new InvalidArgumentException(\sprintf(
-                    "Could not create the goat.runner.%s runner service: driver '%s' is unsupported",
-                    $name, $runnerDriver
-                ));
+            default:
+                $runnerDefinition = $this->createDefaultRunnerFromUrl($container, $name, $config);
+                break;
         }
 
         return $this->configureRunner($container, $name, $config, $runnerDefinition);
@@ -256,10 +257,48 @@ final class GoatQueryExtension extends Extension
             ->setPublic(true)
             ->setFactory([DriverFactory::class, 'fromDoctrineConnection'])
             // @todo should the converter be configurable as well?
-            ->setArguments([new Reference($doctrineConnectionServiceId), new Reference('goat.converter.default')])
+            ->setArguments([new Reference($doctrineConnectionServiceId)])
         ;
 
         $container->setDefinition($runnerId, $runnerDefinition);
+
+        return $runnerDefinition;
+    }
+
+    /**
+     * Default runner creation with some bits of magic.
+     */
+    private function createDefaultRunnerFromUrl(ContainerBuilder $container, string $name, array $config): Definition
+    {
+        $configurationId = 'goat.runner.'.$name.'.conf';
+        $driverId = 'goat.runner.'.$name.'.driver';
+        $runnerId = 'goat.runner.'.$name;
+
+        $configurationDefinition = (new Definition())
+            ->setClass(Configuration::class)
+            ->setPublic(false)
+            ->setFactory([Configuration::class, 'fromString'])
+            ->setArguments([$config['url']])
+        ;
+
+        $driverDefinition = (new Definition())
+            ->setClass(Driver::class)
+            ->setPublic(false)
+            ->setFactory([DriverFactory::class, 'fromConfiguration'])
+            ->setArguments([new Reference($configurationId)])
+        ;
+
+        $runnerDefinition = (new Definition())
+            ->setClass(Runner::class)
+            ->setPublic(true)
+            ->setFactory([new Reference($driverId), 'getRunner'])
+        ;
+
+        $container->addDefinitions([
+            $configurationId => $configurationDefinition,
+            $driverId => $driverDefinition,
+            $runnerId => $runnerDefinition,
+        ]);
 
         return $runnerDefinition;
     }
