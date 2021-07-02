@@ -13,17 +13,18 @@ use Goat\Driver\Configuration;
 use Goat\Driver\Driver;
 use Goat\Driver\DriverFactory;
 use Goat\Driver\ExtPgSQLDriver;
+use Goat\Driver\Runner\AbstractRunner;
 use Goat\Query\QueryBuilder;
 use Goat\Query\Symfony\DataCollector\RunnerDataCollector;
 use Goat\Query\Symfony\Twig\ProfilerExtension;
 use Goat\Runner\Runner;
 use Goat\Runner\Hydrator\GeneratedHydratorBundleRegistry;
 use Goat\Runner\Metadata\ApcuResultMetadataCache;
+use MakinaCorpus\Profiling\ProfilerContext;
 use Symfony\Bundle\WebProfilerBundle\WebProfilerBundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 final class GoatQueryExtension extends Extension
@@ -77,7 +78,8 @@ final class GoatQueryExtension extends Extension
             \array_map(
                 fn (string $id) => new Reference($id),
                 $runnerServicesList
-            )
+            ),
+            new Reference(ProfilerContext::class)
         ]);
 
         // Enable debug mode on each runner, in order to collect executed SQL
@@ -208,6 +210,13 @@ final class GoatQueryExtension extends Extension
         $runnerDefinition->addMethodCall('setValueConverterRegistry', [new Reference('goat.converter.registry')]);
         $runnerDefinition->addMethodCall('setHydratorRegistry', [new Reference('goat.hydrator_registy')]);
 
+        // Using this requires that runners not to be identifier by the Runner
+        // interface, but with a concrete implementation instead, such as the
+        // AbstractRunner, otherwise ProfilerContextAware interface will not
+        // be found by makinacorpus/profiling bundle and it will crash during
+        // cache clear.
+        $runnerDefinition->addTag('profiling.profiler_aware');
+
         $runnerServiceId = 'goat.runner.'.$name;
 
         // Create the query builder definition.
@@ -253,7 +262,7 @@ final class GoatQueryExtension extends Extension
         }
 
         $runnerDefinition = (new Definition())
-            ->setClass(Runner::class)
+            ->setClass(AbstractRunner::class)
             ->setPublic(true)
             ->setFactory([DriverFactory::class, 'fromDoctrineConnection'])
             // @todo should the converter be configurable as well?
@@ -289,7 +298,7 @@ final class GoatQueryExtension extends Extension
         ;
 
         $runnerDefinition = (new Definition())
-            ->setClass(Runner::class)
+            ->setClass(AbstractRunner::class)
             ->setPublic(true)
             ->setFactory([new Reference($driverId), 'getRunner'])
         ;
@@ -326,7 +335,7 @@ final class GoatQueryExtension extends Extension
         ;
 
         $runnerDefinition = (new Definition())
-            ->setClass(Runner::class)
+            ->setClass(AbstractRunner::class)
             ->setPublic(true)
             ->setFactory([new Reference($driverId), 'getRunner'])
         ;

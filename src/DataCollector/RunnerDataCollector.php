@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace Goat\Query\Symfony\DataCollector;
 
-use Goat\Driver\Instrumentation\ProfilerAware;
-use Goat\Driver\Instrumentation\ProfilerResult;
-use Goat\Driver\Instrumentation\QueryProfiler;
-use Goat\Runner\Runner;
+use MakinaCorpus\Profiling\ProfilerContext;
+use PhpCsFixer\Runner\Runner;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 use Symfony\Component\HttpKernel\DataCollector\LateDataCollectorInterface;
+use MakinaCorpus\Profiling\Profiler;
 
 final class RunnerDataCollector extends DataCollector implements LateDataCollectorInterface
 {
     private iterable $runners;
+    private ProfilerContext $profilerContext;
 
-    public function __construct(iterable $runners)
+    public function __construct(iterable $runners, ProfilerContext $profilerContext)
     {
         $this->runners = $runners;
+        $this->profilerContext = $profilerContext;
     }
 
     /**
@@ -45,9 +46,7 @@ final class RunnerDataCollector extends DataCollector implements LateDataCollect
             'transaction_time' => 0, // @todo
         ];
 
-        foreach ($this->runners as $runner) {
-            $this->doCollectRunner($runner, $ret);
-        }
+        $this->doCollectFromProfilerContext($ret);
 
         return $ret;
     }
@@ -55,30 +54,37 @@ final class RunnerDataCollector extends DataCollector implements LateDataCollect
     /**
      * Collect and format all runner profiler data for a single runner.
      */
-    private function doCollectRunner(Runner $runner, array &$ret)
+    private function doCollectFromProfilerContext(array &$ret)
     {
-        if (!$runner instanceof ProfilerAware) {
-            return;
-        }
+        foreach ($this->profilerContext->getAllProfilers() as $profiler) {
+            \assert($profiler instanceof Profiler);
 
-        foreach ($runner->getProfiler()->all() as $result) {
-            \assert($result instanceof ProfilerResult);
-
-            if ($result instanceof QueryProfiler) {
-                $ret['queries'][] = [
-                    'options' => [], // $this->pruneNonScalarFrom($options),
-                    'params' => $result->getSqlArguments() ?? [],
-                    'prepared' => [], //$prepared,
-                    'sql' => $result->getSqlQuery(),
-                    'timers' => $result->getAll(),
-                    'total' => $result->getTotalTime(),
-                ];
-                $ret['query_count']++;
-                $ret['query_time'] += $result->getTotalTime();
+            if ('goat-query' !== \substr($profiler->getName(), 0, 10)) {
+                continue;
             }
 
+            $attributes = $profiler->getAttributes();
+            $elapsedTime = $profiler->getElapsedTime();
+
+            $query = [
+                'options' => [], // @todo deprecated
+                'params' => $attributes['args'],
+                'prepared' => [], // @todo deprecated
+                'sql' => $attributes['sql'] ?? '<none collected>',
+                'timers' => [],
+                'total' => $elapsedTime,
+            ];
+
+            foreach ($profiler->getChildren() as $child) {
+                \assert($child instanceof Profiler);
+                $query['timers'][$child->getName()] = $child->getElapsedTime();
+            }
+
+            $ret['queries'][] = $query;
+            $ret['query_count']++;
+            $ret['query_time'] += $elapsedTime;
             $ret['total_count']++;
-            $ret['total_time'] += $result->getTotalTime();
+            $ret['total_time'] += $elapsedTime;
         }
     }
 
