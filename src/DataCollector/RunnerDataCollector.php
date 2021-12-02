@@ -67,6 +67,7 @@ final class RunnerDataCollector extends DataCollector implements LateDataCollect
             $elapsedTime = $profiler->getElapsedTime();
 
             $query = [
+                'memory' => $profiler->getMemoryUsage(),
                 'options' => [], // @todo deprecated
                 'params' => $attributes['args'],
                 'prepared' => [], // @todo deprecated

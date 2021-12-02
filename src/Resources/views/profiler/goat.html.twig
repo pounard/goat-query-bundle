@@ -3,6 +3,14 @@
 {% block panel %}
 <h2>{{ "Queries"|trans }}</h2>
 
+<p>
+  <ul>
+    <li><strong><em>prepare</em></strong> timings include query formating, and arguments to SQL string conversion.</li>
+    <li><strong><em>memory</em></strong> values include the memory necessary for storing profiling information.</li>
+    <li>Result hydration is not profiled since the generators are executed long after the query ran.</li>
+  </ul>
+</p>
+
 {% if collector.queries is empty %}
 <p>
   <em>{{ "No queries."|trans }}</em>
@@ -12,49 +20,59 @@
   <thead>
   <tr>
     <th>#<span>&#9650;</span></th>
-    <th>Timers<span></span></th>
-    <th style="width: 100%;">Info</th>
+    <th style="width: 10%;">Timers<span></span></th>
+    <th>Info</th>
+    <th>Args</th>
   </tr>
   </thead>
   <tbody id="queries" >
     {% for i, query in collector.queries %}
-    <tr id="queryNo-{{ i }}" class="{{ cycle(['odd', 'even'], i) }}">
-      <td>{{ i }}</td>
-      <td>
-        {% if query.total is defined %}
-        <div><strong>total</strong>:&nbsp;{{ query.total }}&nbsp;ms</div>
-        {% endif %}
-        {% if query.timers is defined %}
-        {% for name, time in query.timers %}
-        <div>{{ name }}:&nbsp;{{ time }}&nbsp;ms</div>
-        {% endfor %}
-        {% endif %}
-      </td>
-      <td id="queryNo-{{ i }}">
-        <div id="code-{{ i }}" style="font-size: 14px;">
-          {% if query.sql %}
-          {{ goat_format_sql(query.sql)|raw }}
-          {% else %}
-          <em>Query was not collected.</em>
+      {% if not query.total is defined %}
+        {% set status_class = '' %}
+      {% elseif query.total > 10 %}
+        {% set status_class = ' status-warning' %}
+      {% elseif query.total > 50 %}
+        {% set status_class = ' status-error' %}
+      {% else %}
+        {% set status_class = '' %}
+      {% endif %}
+      <tr id="queryNo-{{ i }}" class="{{ status_class }}">
+        <td>{{ i }}</td>
+        <td>
+          {% if query.total is defined %}
+            <div><strong>total</strong>:&nbsp;{{ query.total }}&nbsp;ms</div>
           {% endif %}
-        </div>
-        <small>
-          <strong>Parameters</strong>: {{ query.params|yaml_dump }}
-          {# | <strong>Results</strong>: {{ query.result_count }} #}
-        </small><br/>
-      </td>
-    </tr>
+          {% if query.timers is defined %}
+            {% for name, time in query.timers %}
+              <div>{{ name }}:&nbsp;{{ time }}&nbsp;ms</div>
+            {% endfor %}
+          {% endif %}
+          {% if query.memory is defined %}
+            <div><strong>memory</strong>:&nbsp;{{ query.memory }}&nbsp;bytes</div><br/>
+          {% endif %}
+        </td>
+        <td id="queryNo-{{ i }}">
+          <div id="code-{{ i }}">
+            {% if query.sql %}
+              {{ goat_format_sql(query.sql)|raw }}
+            {% else %}
+              <em>Query was not collected.</em>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          {% for key, value in query.params %}
+            <strong>#{{ key }}</strong>: <code>{{ value|yaml_dump }}</code><br/>
+          {% else %}
+            <small>None</small>
+          {% endfor %}
+        </td>
+      </tr>
     {% endfor %}
   </tbody>
 </table>
 {% endif %}
 <style>
-  #collector-content table tr.error td{
-    background-color: #f66;
-  }
-  code {
-    display: none;
-  }
   code pre {
     padding: 5px;
   }
