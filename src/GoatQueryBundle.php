@@ -8,6 +8,7 @@ use Goat\Query\Symfony\DependencyInjection\GoatQueryExtension;
 use Goat\Query\Symfony\DependencyInjection\Compiler\RegisterConverterPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
 /**
@@ -26,7 +27,7 @@ final class GoatQueryBundle extends Bundle
     /**
      * {@inheritdoc}
      */
-    public function getContainerExtension()
+    public function getContainerExtension(): ?ExtensionInterface
     {
         return new GoatQueryExtension();
     }

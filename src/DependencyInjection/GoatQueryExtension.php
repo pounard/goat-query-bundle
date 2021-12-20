@@ -37,9 +37,9 @@ final class GoatQueryExtension extends Extension
         $configuration = $this->getConfiguration($configs, $container);
         $config = $this->processConfiguration($configuration, $configs);
 
-        $this->registerHydratorRegistry($container, $config);
+        $hydratorRegistryEnabled = $this->registerHydratorRegistry($container, $config);
         $this->registerDefaultConverter($container, $config);
-        $runnerServicesList = $this->registerRunnerList($container, $config['runner'] ?? []);
+        $runnerServicesList = $this->registerRunnerList($container, $config['runner'] ?? [], $hydratorRegistryEnabled);
 
         if (\in_array(WebProfilerBundle::class, $container->getParameter('kernel.bundles'))) {
             $this->registerWebProfiler($container, $config, $runnerServicesList);
@@ -52,7 +52,7 @@ final class GoatQueryExtension extends Extension
     private function registerDefaultConverter(ContainerBuilder $container, array $config): void
     {
         $defaultConverter = new Definition(ValueConverterRegistry::class);
-        $defaultConverter->setPrivate(true);
+        $defaultConverter->setPublic(false);
         $container->setDefinition('goat.converter.registry', $defaultConverter);
         $container->setAlias(ConverterInterface::class, 'goat.converter.registry');
     }
@@ -63,7 +63,7 @@ final class GoatQueryExtension extends Extension
     private function registerWebProfiler(ContainerBuilder $container, array $config, array $runnerServicesList): void
     {
         $profilerTwigExtension = new Definition(ProfilerExtension::class);
-        $profilerTwigExtension->setPrivate(true);
+        $profilerTwigExtension->setPublic(false);
         $profilerTwigExtension->addTag('twig.extension');
 
         $runnerDataCollector = new Definition(RunnerDataCollector::class);
@@ -102,16 +102,18 @@ final class GoatQueryExtension extends Extension
     /**
      * Autoconfigure hydrator registry.
      */
-    private function registerHydratorRegistry(ContainerBuilder $container, array $config): void
+    private function registerHydratorRegistry(ContainerBuilder $container, array $config): bool
     {
         if (\in_array(GeneratedHydratorBundle::class, $container->getParameter('kernel.bundles'))) {
             $definition = (new Definition())
                 ->setClass(GeneratedHydratorBundleRegistry::class)
                 ->setArguments([new Reference(DeepHydrator::class)])
-                ->setPrivate(true)
+                ->setPublic(false)
             ;
             $container->setDefinition('goat.hydrator_registy', $definition);
+            return true;
         }
+        return false;
     }
 
     /**
@@ -120,7 +122,7 @@ final class GoatQueryExtension extends Extension
      * @return string[]
      *   Runner services identifiers found.
      */
-    private function registerRunnerList(ContainerBuilder $container, array $config): array
+    private function registerRunnerList(ContainerBuilder $container, array $config, bool $hydratorRegistryEnabled): array
     {
         if (empty($config)) {
             // If configuration is empty, attempt automatic registration
@@ -128,13 +130,13 @@ final class GoatQueryExtension extends Extension
             $runnerDefinition = $this->createDoctrineRunner($container, 'default', $config);
 
             return [
-                $this->configureRunner($container, 'default', $config, $runnerDefinition),
+                $this->configureRunner($container, 'default', $config, $runnerDefinition, $hydratorRegistryEnabled),
             ];
         }
 
         $ret = [];
         foreach ($config as $name => $runnerConfig) {
-            $ret[] = $this->registerRunner($container, $name, $runnerConfig);
+            $ret[] = $this->registerRunner($container, $name, $runnerConfig, $hydratorRegistryEnabled);
         }
 
         return $ret;
@@ -146,7 +148,7 @@ final class GoatQueryExtension extends Extension
      * @return string
      *   The configured runner service identifier.
      */
-    private function registerRunner(ContainerBuilder $container, string $name, array $config): string
+    private function registerRunner(ContainerBuilder $container, string $name, array $config, bool $hydratorRegistryEnabled): string
     {
         $runnerDefinition = null;
         $runnerDriver = $config['driver'] ?? null;
@@ -168,7 +170,7 @@ final class GoatQueryExtension extends Extension
                 break;
         }
 
-        return $this->configureRunner($container, $name, $config, $runnerDefinition);
+        return $this->configureRunner($container, $name, $config, $runnerDefinition, $hydratorRegistryEnabled);
     }
 
     /**
@@ -177,7 +179,7 @@ final class GoatQueryExtension extends Extension
      * @return string
      *   The configured runner service identifier.
      */
-    private function configureRunner(ContainerBuilder $container, string $name, array $config, Definition $runnerDefinition): string
+    private function configureRunner(ContainerBuilder $container, string $name, array $config, Definition $runnerDefinition, bool $hydratorRegistryEnabled): string
     {
         // Metadata cache configuration.
         if ($config['metadata_cache']) {
@@ -208,7 +210,9 @@ final class GoatQueryExtension extends Extension
         }
 
         $runnerDefinition->addMethodCall('setValueConverterRegistry', [new Reference('goat.converter.registry')]);
-        $runnerDefinition->addMethodCall('setHydratorRegistry', [new Reference('goat.hydrator_registy')]);
+        if ($hydratorRegistryEnabled) {
+            $runnerDefinition->addMethodCall('setHydratorRegistry', [new Reference('goat.hydrator_registy')]);
+        }
 
         // Using this requires that runners not to be identifier by the Runner
         // interface, but with a concrete implementation instead, such as the
