@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Goat\Query\Symfony\DataCollector;
 
+use MakinaCorpus\Profiling\Profiler;
 use MakinaCorpus\Profiling\ProfilerContext;
-use PhpCsFixer\Runner\Runner;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 use Symfony\Component\HttpKernel\DataCollector\LateDataCollectorInterface;
-use MakinaCorpus\Profiling\Profiler;
 
 final class RunnerDataCollector extends DataCollector implements LateDataCollectorInterface
 {

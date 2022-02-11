@@ -15,6 +15,9 @@ use Goat\Driver\DriverFactory;
 use Goat\Driver\ExtPgSQLDriver;
 use Goat\Driver\Runner\AbstractRunner;
 use Goat\Query\QueryBuilder;
+use Goat\Query\Symfony\Command\GraphvizCommand;
+use Goat\Query\Symfony\Command\InspectCommand;
+use Goat\Query\Symfony\Command\PgSQLStatCommand;
 use Goat\Query\Symfony\DataCollector\RunnerDataCollector;
 use Goat\Query\Symfony\Twig\ProfilerExtension;
 use Goat\Runner\Runner;
@@ -22,6 +25,7 @@ use Goat\Runner\Hydrator\GeneratedHydratorBundleRegistry;
 use Goat\Runner\Metadata\ApcuResultMetadataCache;
 use MakinaCorpus\Profiling\ProfilerContext;
 use Symfony\Bundle\WebProfilerBundle\WebProfilerBundle;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
@@ -44,6 +48,33 @@ final class GoatQueryExtension extends Extension
         if (\in_array(WebProfilerBundle::class, $container->getParameter('kernel.bundles'))) {
             $this->registerWebProfiler($container, $config, $runnerServicesList);
         }
+        if (\class_exists(Command::class)) {
+            $this->registerConsoleCommands($container, $config);
+        }
+    }
+
+    /**
+     * Register console commands.
+     */
+    private function registerConsoleCommands(ContainerBuilder $container, array $config): void
+    {
+        $definition = new Definition();
+        $definition->setClass(GraphvizCommand::class);
+        $definition->setArguments([new Reference('goat.runner.default')]);
+        $definition->addTag('console.command');
+        $container->setDefinition(GraphvizCommand::class, $definition);
+
+        $definition = new Definition();
+        $definition->setClass(InspectCommand::class);
+        $definition->setArguments([new Reference('goat.runner.default')]);
+        $definition->addTag('console.command');
+        $container->setDefinition(InspectCommand::class, $definition);
+
+        $definition = new Definition();
+        $definition->setClass(PgSQLStatCommand::class);
+        $definition->setArguments([new Reference('goat.runner.default')]);
+        $definition->addTag('console.command');
+        $container->setDefinition(PgSQLStatCommand::class, $definition);
     }
 
     /**
