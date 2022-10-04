@@ -250,7 +250,7 @@ final class GoatQueryExtension extends Extension
         // AbstractRunner, otherwise ProfilerContextAware interface will not
         // be found by makinacorpus/profiling bundle and it will crash during
         // cache clear.
-        $runnerDefinition->addTag('profiling.profiler_aware');
+        $runnerDefinition->addTag('profiling.profiler_aware', ['channel' => 'sql']);
 
         $runnerServiceId = 'goat.runner.'.$name;
 
