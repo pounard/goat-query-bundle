@@ -45,36 +45,46 @@ final class GoatQueryExtension extends Extension
         $this->registerDefaultConverter($container, $config);
         $runnerServicesList = $this->registerRunnerList($container, $config['runner'] ?? [], $hydratorRegistryEnabled);
 
-        if (\in_array(WebProfilerBundle::class, $container->getParameter('kernel.bundles'))) {
-            $this->registerWebProfiler($container, $config, $runnerServicesList);
-        }
-        if (\class_exists(Command::class)) {
-            $this->registerConsoleCommands($container, $config);
+        if ($runnerServicesList) {
+            if (\in_array(WebProfilerBundle::class, $container->getParameter('kernel.bundles'))) {
+                $this->registerWebProfiler($container, $config, $runnerServicesList);
+            }
+            if (\class_exists(Command::class)) {
+                $this->registerConsoleCommands($container, $config);
+            }
         }
     }
 
     /**
      * Register console commands.
      */
-    private function registerConsoleCommands(ContainerBuilder $container, array $config): void
+    private function registerConsoleCommands(ContainerBuilder $container, array $config, array $runnerServicesList): void
     {
-        $definition = new Definition();
-        $definition->setClass(GraphvizCommand::class);
-        $definition->setArguments([new Reference('goat.runner.default')]);
-        $definition->addTag('console.command');
-        $container->setDefinition(GraphvizCommand::class, $definition);
+        foreach ($runnerServicesList as $serviceId) {
+            $definition = new Definition();
+            $definition->setClass(GraphvizCommand::class);
+            $definition->setArguments([new Reference($serviceId)]);
+            $definition->addTag('console.command');
+            $container->setDefinition(GraphvizCommand::class, $definition);
 
-        $definition = new Definition();
-        $definition->setClass(InspectCommand::class);
-        $definition->setArguments([new Reference('goat.runner.default')]);
-        $definition->addTag('console.command');
-        $container->setDefinition(InspectCommand::class, $definition);
+            $definition = new Definition();
+            $definition->setClass(InspectCommand::class);
+            $definition->setArguments([new Reference($serviceId)]);
+            $definition->addTag('console.command');
+            $container->setDefinition(InspectCommand::class, $definition);
 
-        $definition = new Definition();
-        $definition->setClass(PgSQLStatCommand::class);
-        $definition->setArguments([new Reference('goat.runner.default')]);
-        $definition->addTag('console.command');
-        $container->setDefinition(PgSQLStatCommand::class, $definition);
+            $definition = new Definition();
+            $definition->setClass(PgSQLStatCommand::class);
+            $definition->setArguments([new Reference($serviceId)]);
+            $definition->addTag('console.command');
+            $container->setDefinition(PgSQLStatCommand::class, $definition);
+
+            // @todo We register only one for the first runner in order,
+            //    but it might be nice to have more than one actually.
+            //    A place to start with would be to have a runner registry
+            //    which allows listing and fetching them.
+            break;
+        }
     }
 
     /**
@@ -155,16 +165,6 @@ final class GoatQueryExtension extends Extension
      */
     private function registerRunnerList(ContainerBuilder $container, array $config, bool $hydratorRegistryEnabled): array
     {
-        if (empty($config)) {
-            // If configuration is empty, attempt automatic registration
-            // of the 'default' connection using the 'doctrine' driver.
-            $runnerDefinition = $this->createDoctrineRunner($container, 'default', $config);
-
-            return [
-                $this->configureRunner($container, 'default', $config, $runnerDefinition, $hydratorRegistryEnabled),
-            ];
-        }
-
         $ret = [];
         foreach ($config as $name => $runnerConfig) {
             $ret[] = $this->registerRunner($container, $name, $runnerConfig, $hydratorRegistryEnabled);
@@ -213,7 +213,7 @@ final class GoatQueryExtension extends Extension
     private function configureRunner(ContainerBuilder $container, string $name, array $config, Definition $runnerDefinition, bool $hydratorRegistryEnabled): string
     {
         // Metadata cache configuration.
-        if ($config['metadata_cache']) {
+        if (isset($config['metadata_cache'])) {
             switch ($config['metadata_cache']) {
 
                 case 'array': // Do nothing, it's the default.
