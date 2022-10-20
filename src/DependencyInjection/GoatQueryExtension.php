@@ -50,7 +50,7 @@ final class GoatQueryExtension extends Extension
                 $this->registerWebProfiler($container, $config, $runnerServicesList);
             }
             if (\class_exists(Command::class)) {
-                $this->registerConsoleCommands($container, $config);
+                $this->registerConsoleCommands($container, $config, $runnerServicesList);
             }
         }
     }
