@@ -299,7 +299,7 @@ final class GoatQueryExtension extends Extension
         $runnerDefinition = (new Definition())
             ->setClass(AbstractRunner::class)
             ->setPublic(true)
-            ->setFactory([DriverFactory::class, 'fromDoctrineConnection'])
+            ->setFactory([DriverFactory::class, 'doctrineConnectionRunner'])
             // @todo should the converter be configurable as well?
             ->setArguments([new Reference($doctrineConnectionServiceId)])
         ;
