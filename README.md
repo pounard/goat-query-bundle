@@ -30,6 +30,60 @@ or controllers action methods parameters):
 
  - `Goat\Query\QueryBuilder` gives you a query factory instance.
 
+# Configuration
+
+## Manual configuration (standalone)
+
+Manually configuring your connections is as simple as:
+
+```yaml
+parameters:
+    env(DATABASE_URL): 'pgsql://username:password@host:5432/database'
+    env(DATABASE_URL_OTHER): 'pgsql://username:password@host:5432/other'
+goat_query:
+    runner:
+        default:
+            url: '%env(resolve:DATABASE_URL)%'
+        other:
+            url: '%env(resolve:DATABASE_URL_OTHER)%'
+```
+
+## Automatic configuration (side by side with Doctrine)
+
+Per default, if you installed and configured Doctrine in Symfony, this bundle
+will create one runner per Doctrine connexion, re-using Doctrine DBAL PDO
+connexion for each one, sharing its sessions.
+
+Considering the following Doctrine configuration:
+
+```yaml
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+```
+
+You will obtain a single `Goat\Runner\Runner` instance in the container,
+named `goat.runner.default`.
+
+Using a more advanced configuration, such as:
+
+```yaml
+doctrine:
+    dbal:
+        connections:
+            default:
+                url: '%env(resolve:DATABASE_URL)%'
+            logging:
+                url: '%env(resolve:DATABASE_URL)%'
+```
+
+You will obtain 2 different runners:
+
+ - `goat.runner.default`
+ - `goat.runner.logging`
+
+No further configuration is required.
+
 # Advanced configuration
 
 ## Runners
